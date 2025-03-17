@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إضافة وعرض أسئلة الامتحان</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            direction: rtl;
+            text-align: right;
+            background-color: #f4f4f4;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            margin: auto;
+        }
+        h2 {
+            color: #333;
+        }
+        label {
+            font-weight: bold;
+        }
+        input {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 10px;
+            width: 100%;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #218838;
+        }
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        li {
+            background: #fff;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 4px;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            position: relative;
+        }
+        .options {
+            display: flex;
+            gap: 10px;
+            margin-top: 5px;
+            flex-wrap: wrap;
+        }
+        .delete-btn {
+            background: red;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+            font-size: 12px;
+        }
+        .logout-btn {
+            background-color: #dc3545;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>إضافة سؤال جديد</h2>
+        <label>السؤال:</label>
+        <input type="text" id="question" placeholder="أدخل السؤال">
+        <label>الخيار A:</label>
+        <input type="text" id="optionA" placeholder="الخيار A">
+        <label>الخيار B:</label>
+        <input type="text" id="optionB" placeholder="الخيار B">
+        <label>الخيار C:</label>
+        <input type="text" id="optionC" placeholder="الخيار C">
+        <label>الخيار D:</label>
+        <input type="text" id="optionD" placeholder="الخيار D">
+        <label>الإجابة الصحيحة:</label>
+        <input type="text" id="correctAnswer" placeholder="أدخل الإجابة الصحيحة">
+        <button onclick="addQuestion()">إضافة السؤال</button>
+        <button class="logout-btn" onclick="logout()">تسجيل الخروج</button>
+        <h2>الأسئلة المضافة</h2>
+        <ul id="questionsList"></ul>
+    </div>
+    
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
+        
+        const firebaseConfig = {
+            apiKey: "AIzaSyDqgl3Xn3KmeH5ZFg5ToBq3yzuHDSzNTk8",
+            authDomain: "exam-e8fa9.firebaseapp.com",
+            projectId: "exam-e8fa9",
+            storageBucket: "exam-e8fa9.appspot.com",
+            messagingSenderId: "995581072212",
+            appId: "1:995581072212:web:33f7ecffa01d3010d9aec1",
+            measurementId: "G-D898YWKT96"
+        };
+        
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        onAuthStateChanged(auth, (user) => {
+            if (!user) {
+                window.location.href = "login.html";
+            }
+        });
+
+        window.logout = function() {
+            signOut(auth).then(() => {
+                window.location.href = "login.html";
+            }).catch((error) => {
+                console.error("خطأ في تسجيل الخروج: ", error);
+            });
+        };
+
+        window.addQuestion = async function() {
+            const questionText = document.getElementById("question").value;
+            const optionA = document.getElementById("optionA").value;
+            const optionB = document.getElementById("optionB").value;
+            const optionC = document.getElementById("optionC").value;
+            const optionD = document.getElementById("optionD").value;
+            const correctAnswer = document.getElementById("correctAnswer").value;
+            
+            try {
+                await addDoc(collection(db, "questions"), {
+                    question: questionText,
+                    options: { A: optionA, B: optionB, C: optionC, D: optionD },
+                    correctAnswer: correctAnswer
+                });
+                alert("تمت إضافة السؤال بنجاح!");
+                loadQuestions();
+            } catch (error) {
+                console.error("خطأ في إضافة السؤال: ", error);
+            }
+        };
+
+        window.loadQuestions = async function() {
+            const questionsList = document.getElementById("questionsList");
+            questionsList.innerHTML = "";
+            
+            const querySnapshot = await getDocs(collection(db, "questions"));
+            querySnapshot.forEach((doc) => {
+                const data = doc.data();
+                const listItem = document.createElement("li");
+                listItem.innerHTML = `<strong>${data.question}</strong>
+                                      <div class="options">
+                                          <span>A) ${data.options.A}</span>
+                                          <span>B) ${data.options.B}</span>
+                                          <span>C) ${data.options.C}</span>
+                                          <span>D) ${data.options.D}</span>
+                                      </div>
+                                      <em>الإجابة الصحيحة: ${data.correctAnswer}</em>`;
+                questionsList.appendChild(listItem);
+            });
+        };
+
+        window.onload = loadQuestions;
+    </script>
+</body>
+</html>
