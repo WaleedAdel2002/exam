@@ -106,30 +106,34 @@
         button:hover {
             background: #0056b3;
         }
+.sidebar {
+    position: fixed;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: grid;
+    grid-template-columns: repeat(5, 1fr); /* 🔥 10 مربعات في كل صف */
+    gap: 10px;
+    width: fit-content;
+    background: white;
+    padding: 10px;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
 
-        .sidebar {
-            position: fixed;
-            right: 20px;
-            top: 50%;
-            transform: translateY(-50%);
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .question-box {
-            width: 50px;
-            height: 50px;
-            background: #ddd;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 18px;
-            font-weight: bold;
-            cursor: pointer;
-            border-radius: 5px;
-            transition: 0.3s;
-        }
+.question-box {
+    width: 40px;  /* ✅ حجم أصغر للمربعات */
+    height: 40px;
+    background: #ddd;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: 0.3s;
+}
 
         .question-box.selected {
             background: #28a745;
@@ -269,10 +273,12 @@ function startExam() {
             `;
         }
 
-        function saveAnswer(questionId, answer) {
-            studentAnswers[questionId] = answer;
-            updateSidebar(currentQuestionIndex);
-        }
+function saveAnswer(questionId, answer) {
+    studentAnswers[questionId] = answer;
+    let index = questions.findIndex(q => q.id === questionId);
+    updateSidebar(index);
+}
+
 
         function nextQuestion() {
             if (currentQuestionIndex < questions.length - 1) {
@@ -296,10 +302,18 @@ function startExam() {
             document.getElementById("sidebar").innerHTML = sidebarHTML;
         }
 
-        function updateSidebar(index) {
-            let box = document.getElementById(`box-${index}`);
-            box.classList.add("selected");
-        }
+function updateSidebar(index) {
+    let box = document.getElementById(`box-${index}`);
+
+    if (studentAnswers[questions[index].id]) {
+        box.style.backgroundColor = "#007bff"; // أزرق للأسئلة المجابة
+        box.style.color = "white";
+    } else {
+        box.style.backgroundColor = "#ddd"; // اللون الافتراضي للأسئلة غير المجابة
+        box.style.color = "black";
+    }
+}
+
 
 function submitExam() {
     let studentName = document.getElementById("studentName").value.trim();
@@ -308,6 +322,12 @@ function submitExam() {
     if (studentName === "" || studentID === "") {
         alert("⚠️ الرجاء إدخال اسم الطالب والرقم القومي");
         return;
+    }
+
+    // 🛑 رسالة تأكيد قبل إرسال الإجابات
+    let confirmSubmit = confirm("هل أنت متأكد أنك تريد إرسال الإجابات؟ لا يمكنك التعديل بعد الإرسال.");
+    if (!confirmSubmit) {
+        return; // ⬅️ إلغاء الإرسال إذا ضغط الطالب على "إلغاء"
     }
 
     let correctCount = 0;
