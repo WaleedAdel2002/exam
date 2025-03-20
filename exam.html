@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>امتحان الطالب</title>
+
+    <!-- 🔥 تحميل Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+
+    <style>
+	#questionsContainer, .nav-buttons, .submit-button {
+    display: none;
+}
+
+        body {
+            font-family: 'Cairo', sans-serif;
+            direction: rtl;
+            text-align: right;
+            background: linear-gradient(135deg, #007bff, #00c6ff);
+            color: #333;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 600px;
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            position: relative;
+        }
+
+        h2 {
+            text-align: center;
+            color: #007bff;
+            margin-bottom: 20px;
+        }
+
+        label {
+            font-size: 16px;
+            font-weight: bold;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #007bff;
+            border-radius: 5px;
+            font-size: 16px;
+            margin-bottom: 15px;
+        }
+
+        .question {
+            margin-bottom: 20px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .option {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 16px;
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+
+        .option input {
+            margin: 0;
+        }
+
+        .nav-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px;
+            font-size: 18px;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: 0.3s;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        .sidebar {
+            position: fixed;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .question-box {
+            width: 50px;
+            height: 50px;
+            background: #ddd;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: 0.3s;
+        }
+
+        .question-box.selected {
+            background: #28a745;
+            color: white;
+        }
+	        .submit-button {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+	<h3 id="timer">الوقت المتبقي: 00:00</h3>
+        <h2>امتحان الطالب</h2>
+        <div class="student-info">
+<label for="studentName">اسم الطالب:</label>
+<input type="text" id="studentName" placeholder="أدخل اسمك" required oninput="enableExam()">
+
+<label for="studentID">الرقم القومي:</label>
+<input type="text" id="studentID" placeholder="ادخل رقمك القومي" required oninput="enableExam()">
+<button id="startExamButton" onclick="startExam()">بدء الامتحان</button>
+
+	</div>
+	<hr>
+        <div id="questionsContainer"></div>
+	<hr>
+        <div class="nav-buttons">
+            <button onclick="prevQuestion()">السابق</button>
+            <button onclick="nextQuestion()">التالي</button>
+        </div>
+	<hr>
+	<div class="submit-button">
+        <button onclick="submitExam()">إرسال الإجابات</button>
+	</div>
+    </div>
+
+    <div class="sidebar" id="sidebar"></div>
+
+    <script>
+
+let examStarted = false; // ✅ منع تحميل الأسئلة أكثر من مرة
+
+function startExam() {
+    let studentName = document.getElementById("studentName").value.trim();
+    let studentID = document.getElementById("studentID").value.trim();
+    let studentInfoSection = document.querySelector(".student-info"); 
+    let questionsContainer = document.getElementById("questionsContainer");
+    let navButtons = document.querySelector(".nav-buttons");
+    let submitButton = document.querySelector(".submit-button");
+
+    if (studentName === "" || studentID === "") {
+        alert("⚠️ الرجاء إدخال اسم الطالب والرقم القومي لبدء الامتحان.");
+        return;
+    }
+
+    if (!examStarted) {
+        examStarted = true;
+
+        startTimer();
+    }
+
+    // ✅ إخفاء بيانات الطالب
+    studentInfoSection.style.display = "none";
+
+    // ✅ إظهار الأسئلة وأزرار التنقل والإرسال بعد بدء الامتحان
+    questionsContainer.style.display = "block";
+    navButtons.style.display = "flex";
+    submitButton.style.display = "flex";
+}
+
+
+
+        // 🔥 تهيئة Firebase
+        var firebaseConfig = {
+            apiKey: "AIzaSyDqgl3Xn3KmeH5ZFg5ToBq3yzuHDSzNTk8",
+            authDomain: "exam-e8fa9.firebaseapp.com",
+            projectId: "exam-e8fa9",
+            storageBucket: "exam-e8fa9.appspot.com",
+            messagingSenderId: "995581072212",
+            appId: "1:995581072212:web:33f7ecffa01d3010d9aec1"
+        };
+        firebase.initializeApp(firebaseConfig);
+        var db = firebase.firestore();
+
+        let questions = [];
+        let studentAnswers = {};
+        let currentQuestionIndex = 0;
+
+        function loadQuestions() {
+            db.collection("questions").get().then((querySnapshot) => {
+                querySnapshot.forEach((doc) => {
+                    let questionData = doc.data();
+                    questions.push({
+                        id: doc.id,
+                        text: questionData.question,
+                        options: questionData.options,
+                        correctAnswer: questionData.correctAnswer
+                    });
+                });
+
+                displayQuestion();
+                createSidebar();
+            }).catch((error) => {
+                console.error("خطأ في جلب الأسئلة:", error);
+            });
+        }
+	function goToQuestion(index) {
+	    currentQuestionIndex = index; // تحديث رقم السؤال الحالي
+    	displayQuestion(); // عرض السؤال المحدد
+	}
+
+
+
+
+
+
+        function displayQuestion() {
+            let question = questions[currentQuestionIndex];
+            let optionsHTML = "";
+
+            for (let key in question.options) {
+                let isChecked = studentAnswers[question.id] === key ? "checked" : "";
+                optionsHTML += `
+                    <label class="option">
+                        <input type="radio" name="question-${question.id}" value="${key}" ${isChecked} onchange="saveAnswer('${question.id}', '${key}')">
+                        ${question.options[key]}
+                    </label>
+                `;
+            }
+
+            document.getElementById("questionsContainer").innerHTML = `
+                <div class="question">${question.text}</div>
+                <div class="options">${optionsHTML}</div>
+            `;
+        }
+
+        function saveAnswer(questionId, answer) {
+            studentAnswers[questionId] = answer;
+            updateSidebar(currentQuestionIndex);
+        }
+
+        function nextQuestion() {
+            if (currentQuestionIndex < questions.length - 1) {
+                currentQuestionIndex++;
+                displayQuestion();
+            }
+        }
+
+        function prevQuestion() {
+            if (currentQuestionIndex > 0) {
+                currentQuestionIndex--;
+                displayQuestion();
+            }
+        }
+
+        function createSidebar() {
+            let sidebarHTML = "";
+            questions.forEach((_, index) => {
+                sidebarHTML += `<div class="question-box" id="box-${index}" onclick="goToQuestion(${index})">${index + 1}</div>`;
+            });
+            document.getElementById("sidebar").innerHTML = sidebarHTML;
+        }
+
+        function updateSidebar(index) {
+            let box = document.getElementById(`box-${index}`);
+            box.classList.add("selected");
+        }
+
+function submitExam() {
+    let studentName = document.getElementById("studentName").value.trim();
+    let studentID = document.getElementById("studentID").value.trim(); // 🔥 جلب الرقم القومي
+
+    if (studentName === "" || studentID === "") {
+        alert("⚠️ الرجاء إدخال اسم الطالب والرقم القومي");
+        return;
+    }
+
+    let correctCount = 0;
+    questions.forEach(question => {
+        if (studentAnswers[question.id] === question.correctAnswer) {
+            correctCount++;
+        }
+    });
+
+    let totalQuestions = questions.length;
+    let resultData = { 
+        studentName, 
+        studentID, // ✅ إضافة الرقم القومي
+        answers: studentAnswers, 
+        score: correctCount, 
+        total: totalQuestions 
+    };
+
+    db.collection("results").add(resultData).then(() => {
+        alert(`✅ تم إرسال إجاباتك بنجاح! \n\n نتيجتك: ${correctCount} من ${totalQuestions}`);
+    }).catch((error) => {
+        console.error("❌ خطأ أثناء إرسال البيانات:", error);
+    });
+}
+let examDuration = 1 * 60; // 10 دقائق بالثواني
+let timerInterval;
+
+function startTimer() {
+    let timerDisplay = document.getElementById("timer");
+
+    function updateTimer() {
+        let minutes = Math.floor(examDuration / 60);
+        let seconds = examDuration % 60;
+        timerDisplay.textContent = `الوقت المتبقي: ${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+
+        if (examDuration === 0) {
+            clearInterval(timerInterval); // إيقاف العداد
+            alert("⏳ انتهى الوقت! سيتم إرسال الإجابات الآن.");
+            submitExam(); // ⬅️ إرسال الإجابات تلقائيًا
+        } else {
+            examDuration--;
+        }
+    }
+
+    timerInterval = setInterval(updateTimer, 1000);
+}
+
+// 🚀 تشغيل المؤقت بعد تحميل الأسئلة
+window.onload = function () {
+    loadQuestions();
+
+};
+
+    </script>
+
+</body>
+</html>

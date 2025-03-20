@@ -96,7 +96,7 @@
         <input type="text" id="optionC" placeholder="الخيار C">
         <label>الخيار D:</label>
         <input type="text" id="optionD" placeholder="الخيار D">
-        <label>الإجابة الصحيحة:</label>
+        <label>الإجابة الصحيحة (A ; B ; C ; D):</label>
         <input type="text" id="correctAnswer" placeholder="أدخل الإجابة الصحيحة">
         <button onclick="addQuestion()">إضافة السؤال</button>
         <button class="logout-btn" onclick="logout()">تسجيل الخروج</button>
@@ -158,6 +158,7 @@
             }
         };
 
+
         window.loadQuestions = async function() {
             const questionsList = document.getElementById("questionsList");
             questionsList.innerHTML = "";
@@ -173,10 +174,17 @@
                                           <span>C) ${data.options.C}</span>
                                           <span>D) ${data.options.D}</span>
                                       </div>
-                                      <em>الإجابة الصحيحة: ${data.correctAnswer}</em>`;
+                                      <em>الإجابة الصحيحة: ${data.correctAnswer}</em>
+                                      <button class="delete-btn" onclick="deleteQuestion('${doc.id}')">حذف</button>`;
                 questionsList.appendChild(listItem);
             });
         };
+
+        window.deleteQuestion = async function(id) {
+            await deleteDoc(doc(db, "questions", id));
+            loadQuestions();
+        };
+
 
         window.onload = loadQuestions;
     </script>

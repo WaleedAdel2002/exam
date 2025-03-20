@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نتائج الامتحان</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body {
+            font-family: 'Cairo', sans-serif;
+            direction: rtl;
+            text-align: right;
+            background: #f0f8ff;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            width: 90%;
+            max-width: 800px;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        h2 {
+            text-align: center;
+            color: #007bff;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: center;
+        }
+        th {
+            background: #007bff;
+            color: white;
+        }
+        button {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            margin-top: 10px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        button:hover {
+            background: #218838;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>نتائج الامتحان</h2>
+        <button onclick="downloadExcel()">📥 تنزيل النتائج Excel</button>
+        <table>
+            <thead>
+                <tr>
+                    <th>اسم الطالب</th>
+                    <th>النتيجة</th>
+                    <th>الإجمالي</th>
+                    <th>الرقم القومي</th>
+                </tr>
+            </thead>
+            <tbody id="resultsTable"></tbody>
+        </table>
+    </div>
+
+    <script>
+        var firebaseConfig = {
+            apiKey: "AIzaSyDqgl3Xn3KmeH5ZFg5ToBq3yzuHDSzNTk8",
+            authDomain: "exam-e8fa9.firebaseapp.com",
+            projectId: "exam-e8fa9",
+            storageBucket: "exam-e8fa9.appspot.com",
+            messagingSenderId: "995581072212",
+            appId: "1:995581072212:web:33f7ecffa01d3010d9aec1"
+        };
+        firebase.initializeApp(firebaseConfig);
+        var db = firebase.firestore();
+        var auth = firebase.auth();
+
+        function checkAuth() {
+            auth.onAuthStateChanged(user => {
+                if (!user) {
+                    window.location.href = 'login.html';
+                } else {
+                    loadResults();
+                }
+            });
+        }
+
+        function loadResults() {
+            db.collection("results").get().then((querySnapshot) => {
+                let tableBody = document.getElementById("resultsTable");
+                tableBody.innerHTML = "";
+                querySnapshot.forEach((doc) => {
+                    let result = doc.data();
+                    let row = `<tr>
+                        <td>${result.studentName}</td>
+                        <td>${result.score}</td>
+                        <td>${result.total}</td>
+                        <td>${result.studentID}</td>
+                    </tr>`;
+                    tableBody.innerHTML += row;
+                });
+            });
+        }
+
+        function downloadExcel() {
+            let table = document.querySelector("table");
+            let workbook = XLSX.utils.table_to_book(table, {sheet: "النتائج"});
+            XLSX.writeFile(workbook, "نتائج_الامتحان.xlsx");
+        }
+
+        checkAuth();
+    </script>
+</body>
+</html>

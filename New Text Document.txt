@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>امتحان الطالب</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            direction: rtl;
+            text-align: right;
+            background-color: #f4f4f4;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            margin: auto;
+        }
+        h2 {
+            color: #333;
+        }
+        .question {
+            margin-bottom: 15px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background: #fff;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px;
+            width: 100%;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>امتحان الطالب</h2>
+    <form id="examForm">
+        <div id="questionsContainer"></div>
+        <button type="button" onclick="submitExam()">إرسال الإجابات</button>
+    </form>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+    import { getDatabase, ref, get, set } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyDqgl3Xn3KmeH5ZFg5ToBq3yzuHDSzNTk8",
+        authDomain: "exam-e8fa9.firebaseapp.com",
+        databaseURL: "https://exam-e8fa9-default-rtdb.firebaseio.com/",
+        projectId: "exam-e8fa9",
+        storageBucket: "exam-e8fa9.appspot.com",
+        messagingSenderId: "995581072212",
+        appId: "1:995581072212:web:33f7ecffa01d3010d9aec1"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const auth = getAuth(app);
+
+    function loadQuestions() {
+        const questionsContainer = document.getElementById("questionsContainer");
+        const questionsRef = ref(db, 'questions');
+
+        get(questionsRef).then((snapshot) => {
+            if (snapshot.exists()) {
+                const questions = snapshot.val();
+                questionsContainer.innerHTML = "";
+
+                Object.keys(questions).forEach((key, index) => {
+                    const question = questions[key];
+                    const questionDiv = document.createElement("div");
+                    questionDiv.className = "question";
+                    questionDiv.innerHTML = `
+                        <p><strong>السؤال ${index + 1}: ${question.text}</strong></p>
+                        ${question.options.map((option, i) => `
+                            <label>
+                                <input type="radio" name="question${key}" value="${option}">
+                                ${option}
+                            </label><br>
+                        `).join('')}
+                    `;
+                    questionsContainer.appendChild(questionDiv);
+                });
+            } else {
+                questionsContainer.innerHTML = "<p>لا توجد أسئلة متاحة.</p>";
+            }
+        }).catch((error) => {
+            console.error("خطأ في تحميل الأسئلة: ", error);
+        });
+    }
+
+    function submitExam() {
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                const answers = {};
+                document.querySelectorAll(".question").forEach((questionDiv, index) => {
+                    const questionId = Object.keys(answers).length;
+                    const selectedOption = questionDiv.querySelector("input[type='radio']:checked");
+                    answers[questionId] = selectedOption ? selectedOption.value : "لم يتم الاختيار";
+                });
+
+                set(ref(db, `answers/${user.uid}`), answers)
+                    .then(() => alert("تم إرسال الإجابات بنجاح!"))
+                    .catch((error) => alert("حدث خطأ: " + error.message));
+            } else {
+                alert("يرجى تسجيل الدخول أولاً.");
+            }
+        });
+    }
+
+    loadQuestions();
+</script>
+
+</body>
+</html>
